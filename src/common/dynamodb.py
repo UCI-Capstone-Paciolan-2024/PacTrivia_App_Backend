@@ -1,8 +1,10 @@
 import os
-import boto3
+from packages import boto3
 
+
+"""Shared DynamoDB resource."""
 if os.environ.get('AWS_SAM_LOCAL', False):
-    dynamodb = boto3.resource('dynamodb', endpoint_url='http://host.docker.internal:8000')
+    resource = boto3.resource('dynamodb', endpoint_url='http://host.docker.internal:8000')
 else:
-    dynamodb = boto3.resource('dynamodb')
+    resource = boto3.resource('dynamodb')
 

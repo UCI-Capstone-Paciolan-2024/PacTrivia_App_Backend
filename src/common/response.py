@@ -6,6 +6,7 @@ def _cors_headers(content_type):
 
 
 def response(error: Exception | None, data=None):
+    """Returns a dict to respond to API calls with the appropriate headers and given Exception/Data."""
     e = None
     if error:
         print(f"{error}")

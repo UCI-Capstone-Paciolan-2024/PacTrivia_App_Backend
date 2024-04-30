@@ -27,7 +27,7 @@ Resources:
   regDevice:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: reg_device.lambda_handler
+      Handler: app.reg_device.lambda_handler
       Runtime: python3.12
       CodeUri: ./src
       Description: Used to generate a user token on first app launch.
@@ -46,6 +46,111 @@ Resources:
           Type: Api
           Properties:
             Path: /regDevice
+            Method: POST
+
+  startSession:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.start_session.lambda_handler
+      Runtime: python3.12
+      CodeUri: ./src
+      Description: Starts a game session.
+      MemorySize: 128
+      Timeout: 30
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserData
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Games
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Venues
+      Environment:
+        Variables:
+          USER_TABLE: !Ref UserData
+          GAME_TABLE: !Ref Games
+          VENUE_TABLE: !Ref Venues
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /startSession
+            Method: POST
+
+  addQuestions:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: admin.add_questions.lambda_handler
+      Runtime: python3.12
+      CodeUri: ./src
+      Description: Saves new sets of questions into the database.
+      MemorySize: 128
+      Timeout: 30
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Questions
+      Environment:
+        Variables:
+          QUESTION_TABLE: !Ref Questions
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /addQuestions
+            Method: POST
+
+  getQuestion:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.get_question.lambda_handler
+      Runtime: python3.12
+      CodeUri: ./src
+      Description: Retrieves a question to be answered.
+      MemorySize: 128
+      Timeout: 30
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Questions
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserData
+      Environment:
+        Variables:
+          QUESTION_TABLE: !Ref Questions
+          USER_TABLE: !Ref UserData
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /getQuestion
+            Method: POST
+
+  checkAnswer:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.check_answer.lambda_handler
+      Runtime: python3.12
+      CodeUri: ./src
+      Description: Checks answer and updates score.
+      MemorySize: 128
+      Timeout: 30
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserData
+      Environment:
+        Variables:
+          USER_TABLE: !Ref UserData
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /checkAnswer
             Method: POST
 
   ## DynamoDB Tables ##
@@ -74,6 +179,40 @@ Resources:
         - AttributeName: team
           KeyType: HASH
         - AttributeName: sk
+          KeyType: RANGE
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+  Venues:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: geohash
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: geohash
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+  Games:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: venue_id
+          AttributeType: S
+        - AttributeName: start
+          AttributeType: S
+      KeySchema:
+        - AttributeName: venue_id
+          KeyType: HASH
+        - AttributeName: start
           KeyType: RANGE
       BillingMode: PROVISIONED
       ProvisionedThroughput:
