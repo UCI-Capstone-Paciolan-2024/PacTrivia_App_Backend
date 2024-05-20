@@ -25,7 +25,7 @@ def lambda_handler(event, context):
             return_data['subtotal'] += question_score
         else:
             return_data['question_score'] = 0
-        return return_data
+        return response(None, return_data)
 
     except Exception as e:
         return response(e)

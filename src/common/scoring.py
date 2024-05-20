@@ -1,3 +1,2 @@
-def calculate_score(question_timer: float, response_time: float, max_score: float, attempt_no: int):
-    return 1 - (response_time / question_timer) / 2 * max_score  # TODO: factor in reattempts if needed
-
+def calculate_score(question_timer: float, response_time: float, max_score: float, attempt_no: int=1) -> int:
+    return round((1 - min(response_time / question_timer, 1) / 2) * max_score * max(1 - 0.1 * attempt_no, 0))

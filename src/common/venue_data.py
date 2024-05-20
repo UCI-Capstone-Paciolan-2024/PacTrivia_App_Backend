@@ -7,7 +7,7 @@ import os
 class VenueData:
     """Wrapper for venue DynamoDB table queries."""
     def __init__(self):
-        return  # bypass table load for now
+        return  # bypass table load for now (TODO)
         try:
             self.table = dynamodb.resource.Table(os.environ["VENUE_TABLE"])
             self.table.load()
@@ -27,4 +27,4 @@ class VenueData:
 
     def add(self, name, coords):
         """Add a new venue to the database."""
-        raise NotImplementedError()
+        raise NotImplementedError() # TODO: implement
