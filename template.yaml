@@ -207,12 +207,12 @@ Resources:
       AttributeDefinitions:
         - AttributeName: venue_id
           AttributeType: S
-        - AttributeName: start
+        - AttributeName: end
           AttributeType: S
       KeySchema:
         - AttributeName: venue_id
           KeyType: HASH
-        - AttributeName: start
+        - AttributeName: end
           KeyType: RANGE
       BillingMode: PROVISIONED
       ProvisionedThroughput:

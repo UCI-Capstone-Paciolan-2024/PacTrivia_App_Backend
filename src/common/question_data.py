@@ -1,17 +1,19 @@
 from common import dynamodb
 from common.exceptions import QueryError, NoMoreQuestionsError, QuestionNotFoundError
 from packages.botocore.exceptions import ClientError
+from logger import getLogger
 import os
 
 
 class QuestionData:
     """Wrapper for DynamoDB question table queries."""
-    def __init__(self):
+    def __init__(self, logger=getLogger("QuestionData")):
+        self.logger = logger
         try:
             self.table = dynamodb.resource.Table(os.environ["QUESTION_TABLE"])
             self.table.load()
         except ClientError as e:
-            print(e)
+            self.logger.error(f"Error loading Questions table ({os.environ["QUESTION_TABLE"]}): {e}")
             raise QueryError()
 
     def get_next(self, team: str, after: str | int) -> dict:
@@ -22,11 +24,14 @@ class QuestionData:
                                            Limit=1,
                                            ExpressionAttributeValues={':team': team, ':after': str(after)})
         except ClientError as e:
+            self.logger.error(f"Error getting next question from db: {e}")
             raise QueryError()
-        print(db_response)
+        self.logger.info(f"DynamoDB response to next question query: {db_response}")
         if items := db_response.get("Items"):
             if len(items) > 0:
+                self.logger.info(f"DynamoDB response to next question query: {db_response}")
                 return items[0]
+        self.logger.info(f"No more questions found in response, raising NoMoreQuestionsError")
         raise NoMoreQuestionsError()
 
     def add(self, team: str, qas: list):
@@ -35,6 +40,7 @@ class QuestionData:
             cter = self.table.get_item(Key={"team": team, "sk": "counters"})
             count = cter.get('team_question_count', 0)
             next_index = cter.get('next_unused_sk', 0)
+            self.logger.info(f"Adding new question with index {next_index} for team {team}")
             with self.table.batch_writer() as writer:
                 for qa in qas:
                     writer.put_item(Item={
@@ -52,6 +58,6 @@ class QuestionData:
                     'next_unused_sk': next_index,
                 })
         except ClientError as e:
-            print(f"Error saving questions to DB: {e}")
+            self.logger.error(f"Error saving questions to DB: {e}")
             raise QueryError()
 

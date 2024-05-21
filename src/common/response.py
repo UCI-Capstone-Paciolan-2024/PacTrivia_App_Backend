@@ -12,7 +12,6 @@ def response(error: Exception | None, data: dict | None = None) -> None:
     """Returns a dict to respond to API calls with the appropriate headers and given Exception/Data."""
     e = None
     if error:
-        print(f"{error}")
         e = {'type': type(error).__name__, 'message': str(error)}
     return {
         'statusCode': (400 if error else 200),

@@ -3,33 +3,37 @@ from packages.botocore.exceptions import ClientError
 import os
 import datetime
 from hashlib import sha256
+from logger import getLogger
 from common import dynamodb
 
 
 class UserData:
     """Wrapper for user DynamoDB table queries"""
-    def __init__(self):
+    def __init__(self, logger=getLogger()):
+        self.logger = logger
         try:
             self.table = dynamodb.resource.Table(os.environ["USER_TABLE"])
             self.table.load()
         except ClientError as e:
-            print(e)
+            self.logger.error(f"Error loading user data table ({os.environ["USER_TABLE"]}): {e}")
             raise QueryError()
 
     def get(self, token: bytes) -> dict:
         """Return a complete user entry or throws error."""
         try:
             if len(token) != 16:
-                print("Invalid user token size")
+                self.logger.error(f"user token received is of invalid size {len(token)}, should be 16.")
                 raise AuthError()
             hashed = sha256(token)
         except Exception as e:
-            print(f"Failed to hash user token")
+            self.logger.error(f"failed to hash user token received: {e}")
             raise AuthError()
         try:
             dbresponse = self.table.get_item(Key={"pk": hashed.digest()})
         except ClientError as e:
+            self.logger.error(f"Query to get user item failed: {e}")
             raise QueryError()
+        self.logger.info(f"DynamoDB response to get user query: {dbresponse}")
         if item := dbresponse.get('Item'):
             return item
         raise AuthError()
@@ -48,13 +52,15 @@ class UserData:
                 }
             )
         except ClientError as e:
-            print(f"Error saving user to DB: {e}")
+            self.logger.error(f"Error saving new user {hashed.digest()} to DB: {e}")
             raise QueryError()
+        self.logger.info(f"Saved new user with pk {hashed.digest()}")
 
     def start_session(self, token: bytes, game: dict, ip="") -> None:
         """Start a new game session for the specific user and event combo."""
         # TODO: enforce session limits
         hashed = sha256(token)
+        self.logger.info(f"starting session for user {hashed.digest()}")
         try:
             old = self.table.update_item(
                 Key={"pk": hashed.digest()},
@@ -69,7 +75,7 @@ class UserData:
                 ReturnValues="UPDATED_OLD"
             )
         except ClientError as e:
-            print(f"Error saving session to DB: {e}")
+            self.logger.error(f"Error saving session to DB: {e}")
             raise QueryError()
 
     def mark_question_seen(self, token: bytes, question: dict, ip: str) -> None:
@@ -104,7 +110,7 @@ class UserData:
                 ReturnValues="UPDATED_OLD"
             )
         except ClientError as e:
-            print(f"Error updating user session: {e}")
+            self.logger.error(f"Error updating user session in DB: {e}")
             raise QueryError()
 
     def check_answer(self, token: bytes, selected: int, timestamp: datetime) -> dict:
@@ -123,7 +129,7 @@ class UserData:
                 return r
             raise AuthError()
         except ClientError as e:
-            print(f"Error checking answer: {e}")
+            self.logger.error(f"Error checking answer in DB: {e}")
             raise QueryError()
 
     def update_score(self, token: bytes, increment_amount: int):
