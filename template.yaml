@@ -23,7 +23,7 @@ Parameters:
     Type: String
 
 Resources:
-  ## Routes ##
+  ## PUBLIC ROUTES ##
   regDevice:
     Type: AWS::Serverless::Function
     Properties:
@@ -78,30 +78,6 @@ Resources:
             Path: /startSession
             Method: POST
 
-  addQuestions:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: admin.add_questions.lambda_handler
-      Runtime: python3.12
-      CodeUri: ./src
-      Description: Saves new sets of questions into the database.
-      MemorySize: 128
-      Timeout: 30
-      Architectures:
-        - arm64
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref Questions
-      Environment:
-        Variables:
-          QUESTION_TABLE: !Ref Questions
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /addQuestions
-            Method: POST
-
   getQuestion:
     Type: AWS::Serverless::Function
     Properties:
@@ -152,6 +128,80 @@ Resources:
           Properties:
             Path: /checkAnswer
             Method: POST
+
+  ## PRIVATE / ADMIN ROUTES ##
+  questionManager:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: admin.question_manager.lambda_handler
+      Runtime: python3.12
+      CodeUri: ./src
+      Description: Admin function for managing questions in database.
+      MemorySize: 128
+      Timeout: 30
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Questions
+      Environment:
+        Variables:
+          QUESTION_TABLE: !Ref Questions
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /questionManager
+            Method: POST
+
+  gameManager:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: admin.game_manager.lambda_handler
+      Runtime: python3.12
+      CodeUri: ./src
+      Description: Admin function for managing games in database.
+      MemorySize: 128
+      Timeout: 30
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Games
+      Environment:
+        Variables:
+          QUESTION_TABLE: !Ref Games
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /gameManager
+            Method: POST
+
+  venueManager:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: admin.venue_manager.lambda_handler
+      Runtime: python3.12
+      CodeUri: ./src
+      Description: Admin function for managing venues in database.
+      MemorySize: 128
+      Timeout: 30
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Venues
+      Environment:
+        Variables:
+          QUESTION_TABLE: !Ref Venues
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /venueManager
+            Method: POST
+
 
   ## DynamoDB Tables ##
   UserData:
