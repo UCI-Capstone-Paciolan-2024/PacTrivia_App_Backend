@@ -1,15 +1,15 @@
-from common.exceptions import QueryError, AuthError, AnswerTimeoutException, NoValidSessionError
+from common.exceptions import QueryError, AuthError, AnswerTimeoutError, NoValidSessionError
 from packages.botocore.exceptions import ClientError
 import os
 import datetime
 from hashlib import sha256
-from logger import getLogger
+from common.logger import getLogger
 from common import dynamodb
 
 
 class UserData:
     """Wrapper for user DynamoDB table queries"""
-    def __init__(self, logger=getLogger()):
+    def __init__(self, logger=getLogger("UserData")):
         self.logger = logger
         try:
             self.table = dynamodb.resource.Table(os.environ["USER_TABLE"])
@@ -36,6 +36,7 @@ class UserData:
         self.logger.info(f"DynamoDB response to get user query: {dbresponse}")
         if item := dbresponse.get('Item'):
             return item
+        self.logger.error(f"No user found for hashed token {hashed}")
         raise AuthError()
 
     def create(self, token: bytes, ip="", username="Anonymous") -> None:
@@ -117,24 +118,44 @@ class UserData:
         """Return the values needed to score a response."""
         try:
             if user := self.get(token):
+                self.logger.info("Found user, checking answer")
                 r = {}
                 r['attempt_no'] = 0  # TODO
                 r['elapsed_s'] = (timestamp - datetime.datetime.fromisoformat(user['session_data']['question_time'])).seconds
-                if r['elapsed_s'] > user['pending_question']['timeout_seconds']:
-                    raise AnswerTimeoutException()
+                if r['elapsed_s'] > user['session_data']['pending_question']['timeout_seconds']:
+                    raise AnswerTimeoutError()
                 r['correct'] = selected in user['session_data']['pending_question']['correct_indices']
-                r['max_s'] = user['session_data']['pending_question']['timeout_seconds']
-                r['session_score'] = user['session_data']['pending_score']
+                r['max_s'] = int(user['session_data']['pending_question']['timeout_seconds'])
+                r['session_score'] = int(user['session_data']['pending_score'])
                 r['is_last'] = user['session_data']['question_counter'] == user['session_data']['game']['questions_per_session']
+                self.logger.info(f"Pre-scoring results: {r}")
                 return r
             raise AuthError()
         except ClientError as e:
-            self.logger.error(f"Error checking answer in DB: {e}")
+            self.logger.error(f"Error checking answer: {e}")
             raise QueryError()
 
     def update_score(self, token: bytes, increment_amount: int):
         """Add increment_amount to session (not final) score."""
-        raise NotImplementedError()
+        hashed = sha256(token)
+        try:
+            old = self.table.update_item(
+                Key={"pk": hashed.digest()},
+                UpdateExpression="set #ses.#sc=if_not_exists(#ses.#sc, :zero) + :inc",
+                ExpressionAttributeNames={
+                    '#ses': 'session_data',
+                    '#sc': 'pending_score'
+                },
+                ExpressionAttributeValues={
+                    ":inc": increment_amount,
+                    ":zero": 0
+                },
+                ReturnValues="UPDATED_OLD"
+            )
+            self.logger.info(f"incremented session score by {increment_amount}")
+        except ClientError as e:
+            self.logger.error(f"Error updating session score: {e}")
+            raise QueryError()
 
     def complete_session(self, token: bytes):
         """Add session score to final score, then delete session data."""
