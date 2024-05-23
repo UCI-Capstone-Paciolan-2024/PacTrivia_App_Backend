@@ -4,19 +4,20 @@ import json
 from common.scoring import calculate_score
 from common.response import response
 from common.user_data import UserData
+from common.logger import getLogger
 
 
 def lambda_handler(event, context):
     """Handles /checkAnswer POST requests."""
     body = json.loads(event['body'])
+    logger = getLogger("checkAnswer")
     token = body.get('token', None)
     if type(token) is str:
         token = bytes.fromhex(token)
     ans = body.get('answer_index', -1)
-    client_time = body.get('client_time')  # not used for now
     try:
         userdata = UserData()
-        stat = userdata.check_answer(token, ans, datetime.datetime.utcnow().isoformat())
+        stat = userdata.check_answer(token, ans, datetime.datetime.utcnow())
         return_data = {'subtotal': stat['session_score']}
         if stat['correct']:
             question_score = calculate_score(stat['max_s'], stat['elapsed_s'], 100, stat['attempt_no'])
