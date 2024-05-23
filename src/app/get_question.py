@@ -25,7 +25,7 @@ def lambda_handler(event, context):
                     and session_data['game']['questions_per_session'] > session_data['question_counter']):
                 # pick one of the teams randomly
                 team = random.sample(session_data['game']['teams'], 1)[0]
-                seen = user['questions_seen'].get('team', None)
+                seen = user['questions_seen'].get(team, None)
                 last = -1
                 if seen:
                     last = seen[-1]
