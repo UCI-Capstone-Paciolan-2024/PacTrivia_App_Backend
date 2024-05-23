@@ -170,7 +170,7 @@ Resources:
             TableName: !Ref Games
       Environment:
         Variables:
-          QUESTION_TABLE: !Ref Games
+          GAME_TABLE: !Ref Games
       Events:
         Api:
           Type: Api
@@ -194,7 +194,7 @@ Resources:
             TableName: !Ref Venues
       Environment:
         Variables:
-          QUESTION_TABLE: !Ref Venues
+          VENUE_TABLE: !Ref Venues
       Events:
         Api:
           Type: Api
