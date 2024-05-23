@@ -1,4 +1,4 @@
-import json
+import common.packages.simplejson as json
 
 
 def _cors_headers(content_type):
