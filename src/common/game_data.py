@@ -3,7 +3,7 @@ from datetime import datetime
 from common import dynamodb
 from common.exceptions import QueryError
 from packages.botocore.exceptions import ClientError
-from logger import getLogger
+from common.logger import getLogger
 import os
 
 
@@ -18,22 +18,23 @@ class GameData:
             self.logger.error(f"Error loading games table ({os.environ["GAME_TABLE"]}): {e}")
             raise QueryError()
 
-    def now_playing(self, venue_id: int):
+    def now_playing(self, venue_id: str):
         datetime.utcnow().isoformat()
         try:
-            db_response = self.table.query(KeyConditionExpression="venue_id = :venue_id and end > :now",
+            db_response = self.table.query(KeyConditionExpression="venue_id = :venue_id and #end > :now",
+                                           ExpressionAttributeNames={'#end': 'end'},
                                            Limit=1,
                                            ExpressionAttributeValues={':venue_id': venue_id, ':now': datetime.utcnow().isoformat()})
         except ClientError as e:
             self.logger.error(f"Error searching for current game: {e}")
-            raise QueryError
+            raise QueryError()
         if len(db_response.get('Items', [])) == 1:
             self.logger.info(f"Found current game at venue #{venue_id}: {db_response['Items'][0]}")
             return db_response['Items'][0]
         else:
             self.logger.info(f"No current game found at venue #{venue_id}")
 
-    def add(self, venue_id: int, games: list[dict(start="", end="", teams=[], max_session=-1, questions_per_session=10)]):
+    def add(self, venue_id: str, games: list[dict(start="", end="", teams=[], max_session=-1, questions_per_session=10)]):
         try:
             with self.table.batch_writer() as writer:
                 for game in games:
@@ -41,13 +42,14 @@ class GameData:
                     writer.put_item(Item=game)
         except ClientError as e:
             self.logger.error(f"Error saving game data to DB: {e}")
-            raise QueryError
+            raise QueryError()
         self.logger.info(f"Saved {len(games)} new games to db.")
 
-    def list(self, venue_id: int | None = None):
+    def list(self, venue_id: str | None = None):
         try:
             if not venue_id:
                 db_response = self.table.scan()
+                self.logger.info(f"DB response to scan: {db_response}")
                 return db_response.get('Items', [])
             db_response = self.table.query(KeyConditionExpression="venue_id = :venue_id",
                                            ExpressionAttributeValues={':venue_id': venue_id,})
