@@ -1,7 +1,7 @@
 from common import dynamodb
 from common.exceptions import QueryError, NoMoreQuestionsError, QuestionNotFoundError
 from packages.botocore.exceptions import ClientError
-from logger import getLogger
+from common.logger import getLogger
 import os
 
 
@@ -40,7 +40,7 @@ class QuestionData:
             cter = self.table.get_item(Key={"team": team, "sk": "counters"})
             count = cter.get('team_question_count', 0)
             next_index = cter.get('next_unused_sk', 0)
-            self.logger.info(f"Adding new question with index {next_index} for team {team}")
+            self.logger.info(f"Adding new questions with indices {next_index} - {next_index + len(qas)} for team {team}")
             with self.table.batch_writer() as writer:
                 for qa in qas:
                     writer.put_item(Item={
@@ -59,5 +59,17 @@ class QuestionData:
                 })
         except ClientError as e:
             self.logger.error(f"Error saving questions to DB: {e}")
+            raise QueryError()
+
+    def list(self, team: str | None = None):
+        try:
+            if not team:
+                db_response = self.table.scan()
+                return db_response.get('Items', [])
+            db_response = self.table.query(KeyConditionExpression="team = :team",
+                                           ExpressionAttributeValues={':team': team,})
+            return db_response.get('Items', [])
+        except ClientError as e:
+            self.logger.error(f"Error scanning question data: {e}")
             raise QueryError()
 

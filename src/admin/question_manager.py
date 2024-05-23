@@ -8,18 +8,18 @@ def lambda_handler(event, context):
     body = json.loads(event['body'])
     # TODO: Admin authentication
     action = body['action']
-    if action == 'add':
-        try:
+    qd = QuestionData()
+    try:
+        if action == 'add':
             new_questions = body['data']
-            qd = QuestionData()
             for q in new_questions:
                 qd.add(team=q['team'], qas=q['questions'])
-        except Exception as e:
-            return response(e)
-        return response(None, None)
-    elif action == 'list':
-        return response(NotImplementedError())
-    elif action == 'remove':
-        return response(NotImplementedError())
-    else:
-        return response(Exception("No or invalid 'action' received."))
+            return response(None, None)
+        elif action == 'list':
+            return response(qd.list(team=body.get('team', None)))
+        elif action == 'remove':
+            raise NotImplementedError()
+        else:
+            raise Exception("No or invalid 'action' received.")
+    except Exception as e:
+        return response(e)
