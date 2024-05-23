@@ -1,5 +1,6 @@
 import json
 from common.response import response
+from common.exceptions import NoGameFoundError
 from common.game_data import GameData
 from common.user_data import UserData
 from common.venue_data import VenueData
@@ -19,15 +20,17 @@ def lambda_handler(event, context):
     try:
         # find the closest venue with a game right now
         game = None
-        for venue in sorted(VenueData().find_nearby(location), key=lambda x: x['distance']):
+        for venue in sorted(VenueData(logger=logger).find_nearby(location), key=lambda x: x['distance']):
             game = GameData(logger=logger).now_playing(venue_id=venue['id'])
             if game:
                 logger.info(f"Found nearby game: {game}")
                 break
         # save the session
-        UserData(logger=logger).start_session(token, game)
-        logger.info(f"Started user session")
-        return response(None, {'game': game})
+        if game:
+            UserData(logger=logger).start_session(token, game)
+            logger.info(f"Started user session")
+            return response(None, {'game': game})
+        raise NoGameFoundError("Could not find any nearby venue with an ongoing game.")
     except Exception as e:
         logger.error(e)
         return response(e)

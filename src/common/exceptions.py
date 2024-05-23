@@ -25,5 +25,9 @@ class NoValidSessionError(Exception):
     pass
 
 
-class AnswerTimeoutException(Exception):
+class AnswerTimeoutError(Exception):
+    pass
+
+
+class NoGameFoundError(Exception):
     pass
