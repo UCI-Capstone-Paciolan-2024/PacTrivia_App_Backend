@@ -4,6 +4,7 @@ from common.exceptions import NoGameFoundError
 from common.game_data import GameData
 from common.user_data import UserData
 from common.venue_data import VenueData
+from common.question_data import QuestionData
 from common.logger import getLogger
 
 
@@ -29,7 +30,8 @@ def lambda_handler(event, context):
         if game:
             UserData(logger=logger).start_session(token, game)
             logger.info(f"Started user session")
-            return response(None, {'game': game})
+            game['team_logos'] = [QuestionData().get_team_meta(team).get('logo', None) for team in game['teams']]
+            return response(None,{'game': game})
         raise NoGameFoundError("Could not find any nearby venue with an ongoing game.")
     except Exception as e:
         logger.error(e)

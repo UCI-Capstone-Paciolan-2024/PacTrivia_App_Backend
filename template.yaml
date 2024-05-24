@@ -66,11 +66,14 @@ Resources:
             TableName: !Ref Games
         - DynamoDBCrudPolicy:
             TableName: !Ref Venues
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Questions
       Environment:
         Variables:
           USER_TABLE: !Ref UserData
           GAME_TABLE: !Ref Games
           VENUE_TABLE: !Ref Venues
+          QUESTION_TABLE: !Ref Questions
       Events:
         Api:
           Type: Api

@@ -34,12 +34,23 @@ class QuestionData:
         self.logger.info(f"No more questions found in response, raising NoMoreQuestionsError")
         raise NoMoreQuestionsError()
 
+    def get_team_meta(self, team: str) -> dict:
+        """Returns the metadata for the team (# of questions, logo, etc.)"""
+        try:
+            meta = self.table.get_item(Key={"team": team, "sk": "meta"})['Item']
+            self.logger.info(f"Metadata found for {team}: {meta}")
+            return meta
+        except ClientError as e:
+            self.logger.error(f"Error getting team metadata from db: {e}")
+            raise QueryError()
+
+
     def add(self, team: str, qas: list):
         """Adds a list of q/a dicts to the database for ONE team."""
         try:
-            cter = self.table.get_item(Key={"team": team, "sk": "meta"})
-            count = cter.get('team_question_count', 0)
-            next_index = cter.get('next_unused_sk', 0)
+            meta = self.table.get_item(Key={"team": team, "sk": "meta"}).get('Item', {})
+            count = meta.get('team_question_count', 0)
+            next_index = meta.get('next_unused_sk', 0)
             self.logger.info(f"Adding new questions with indices {next_index} - {next_index + len(qas)} for team {team}")
             with self.table.batch_writer() as writer:
                 for qa in qas:

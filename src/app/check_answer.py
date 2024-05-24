@@ -9,6 +9,7 @@ from common.logger import getLogger
 
 def lambda_handler(event, context):
     """Handles /checkAnswer POST requests."""
+    # TODO: prevent multiple invokations
     body = json.loads(event['body'])
     logger = getLogger("checkAnswer")
     token = body.get('token', None)
