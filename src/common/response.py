@@ -5,7 +5,7 @@ def _cors_headers(content_type):
     return {
         'Content-Type': content_type,
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type'}
+        'Access-Control-Allow-Headers': '*'}
 
 
 def response(error: Exception | None, data: dict | None = None) -> None:

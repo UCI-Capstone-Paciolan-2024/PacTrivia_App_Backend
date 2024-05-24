@@ -15,7 +15,7 @@ Globals:
   Api:
     Cors:
       AllowMethods: "'GET,POST,OPTIONS'"
-      AllowHeaders: "'content-type'"
+      AllowHeaders: "'*'"
       AllowOrigin: "'*'"
 
 Parameters:
@@ -224,7 +224,7 @@ Resources:
         - AttributeName: team
           AttributeType: S
         - AttributeName: sk
-          AttributeType: B
+          AttributeType: S
       KeySchema:
         - AttributeName: team
           KeyType: HASH
