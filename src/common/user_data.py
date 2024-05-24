@@ -120,7 +120,6 @@ class UserData:
             if user := self.get(token):
                 self.logger.info("Found user, checking answer")
                 r = {}
-                r['attempt_no'] = 0  # TODO
                 r['elapsed_s'] = (timestamp - datetime.datetime.fromisoformat(user['session_data']['question_time'])).seconds
                 if r['elapsed_s'] > user['session_data']['pending_question']['timeout_seconds']:
                     raise AnswerTimeoutError()
@@ -128,6 +127,8 @@ class UserData:
                 r['max_s'] = int(user['session_data']['pending_question']['timeout_seconds'])
                 r['session_score'] = int(user['session_data']['pending_score'])
                 r['is_last'] = user['session_data']['question_counter'] == user['session_data']['game']['questions_per_session']
+                seen = user['questions_seen'].get(user['session_data']['pending_question']['team'], [])
+                r['attempt_no'] = seen.count(user['session_data']['pending_question']['sk'])
                 self.logger.info(f"Pre-scoring results: {r}")
                 return r
             raise AuthError()

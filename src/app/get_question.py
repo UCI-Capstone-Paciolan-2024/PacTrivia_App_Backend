@@ -25,12 +25,14 @@ def lambda_handler(event, context):
                     and session_data['game']['questions_per_session'] > session_data['question_counter']):
                 # pick one of the teams randomly
                 team = random.sample(session_data['game']['teams'], 1)[0]
-                seen = user['questions_seen'].get(team, None)
-                last = -1
-                if seen:
-                    last = seen[-1]
-                q = QuestionData(logger=logger).get_next(team, last)
+                # seen = user['questions_seen'].get(team, None)
+                # last = -1
+                # if seen:
+                #     last = seen[-1]
+                # resolved: start from session last instead of global last question here...
+                q = QuestionData(logger=logger).get_next(team, user['session_data'].get('question_counter', 0) - 1)
                 q['timeout_seconds'] = 30  # TODO: hardcoded value
+                q['team'] = team
                 userdata.mark_question_seen(token, q, client_ip)
                 return response(None, {
                     "question": q['question'],

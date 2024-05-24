@@ -19,7 +19,7 @@ class QuestionData:
     def get_next(self, team: str, after: str | int) -> dict:
         """Returns the first question available for a team with an index higher than after."""
         try:
-            # TODO: make sure this never returns the counters
+            # TODO: make sure this never returns the metadata
             db_response = self.table.query(KeyConditionExpression="team = :team and sk > :after",
                                            Limit=1,
                                            ExpressionAttributeValues={':team': team, ':after': str(after)})
@@ -37,7 +37,7 @@ class QuestionData:
     def add(self, team: str, qas: list):
         """Adds a list of q/a dicts to the database for ONE team."""
         try:
-            cter = self.table.get_item(Key={"team": team, "sk": "counters"})
+            cter = self.table.get_item(Key={"team": team, "sk": "meta"})
             count = cter.get('team_question_count', 0)
             next_index = cter.get('next_unused_sk', 0)
             self.logger.info(f"Adding new questions with indices {next_index} - {next_index + len(qas)} for team {team}")
@@ -53,7 +53,7 @@ class QuestionData:
                     next_index += 1
                 writer.put_item(Item={
                     'team': team,
-                    'sk': "counters",
+                    'sk': "meta",
                     'team_question_count': count + len(qas),
                     'next_unused_sk': next_index,
                 })
