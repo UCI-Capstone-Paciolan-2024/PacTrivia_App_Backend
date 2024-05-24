@@ -18,7 +18,11 @@ def lambda_handler(event, context):
     try:
         userdata = UserData()
         stat = userdata.check_answer(token, ans, datetime.datetime.utcnow())
-        return_data = {'subtotal': stat['session_score']}
+        return_data = {'subtotal': stat['session_score'],
+                       'answer_correct': stat['correct'],
+                       'session_finished': stat['is_last'],
+                       'elapsed_seconds': stat['elapsed_s'],
+                       'prev_attempt_count': stat['attempt_no']}
         if stat['correct']:
             question_score = calculate_score(stat['max_s'], stat['elapsed_s'], 100, stat['attempt_no'])
             userdata.update_score(token, question_score)
