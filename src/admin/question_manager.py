@@ -16,7 +16,7 @@ def lambda_handler(event, context):
                 qd.add(team=q['team'], qas=q['questions'])
             return response(None, None)
         elif action == 'list':
-            return response(qd.list(team=body.get('team', None)))
+            return response(None, qd.list(team=body.get('team',)))
         elif action == 'remove':
             raise NotImplementedError()
         else:

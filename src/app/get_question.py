@@ -7,6 +7,7 @@ from common.user_data import UserData
 from common.exceptions import NoValidSessionError
 from common.logger import getLogger
 
+
 def lambda_handler(event, context):
     """Handles /getQuestion POST requests."""
     body = json.loads(event['body'])
@@ -23,25 +24,16 @@ def lambda_handler(event, context):
         if session_data:= user.get('session_data', None):
             if (datetime.datetime.utcnow().isoformat() < session_data['game']['end']
                     and session_data['game']['questions_per_session'] > session_data['question_counter']):
-                # pick one of the teams randomly
-                team = random.sample(session_data['game']['teams'], 1)[0]
-                # seen = user['questions_seen'].get(team, None)
-                # last = -1
-                # if seen:
-                #     last = seen[-1]
-                # resolved: start from session last instead of global last question here...
-                q = QuestionData(logger=logger).get_next(team, user['session_data'].get('question_counter', 0) - 1)
+                q = session_data['questions'][int(session_data['question_counter'])]
                 q['timeout_seconds'] = 30  # TODO: hardcoded value
-                q['team'] = team
-                userdata.mark_question_seen(token, q, client_ip)
+                userdata.update_last_question_sent(token, q)
                 return response(None, {
                     "question": q['question'],
                     "options": q['answer_options'],
                     "timeout_seconds": q['timeout_seconds'],
                 })
-        logger.error("No active session for user or game has ended.")
-        return response(NoValidSessionError())
-
+            raise NoValidSessionError("Session finished")
+        raise NoValidSessionError("No active session found")
     except Exception as e:
         return response(e)
 

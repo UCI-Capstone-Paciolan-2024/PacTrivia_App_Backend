@@ -9,7 +9,6 @@ from common.logger import getLogger
 
 def lambda_handler(event, context):
     """Handles /checkAnswer POST requests."""
-    # TODO: prevent multiple invokations
     body = json.loads(event['body'])
     logger = getLogger("checkAnswer")
     token = body.get('token', None)
@@ -21,7 +20,7 @@ def lambda_handler(event, context):
         stat = userdata.check_answer(token, ans, datetime.datetime.utcnow())
         return_data = {'subtotal': stat['session_score'],
                        'answer_correct': stat['correct'],
-                       'session_finished': stat['is_last'],
+                       'session_finished': stat['was_last'],
                        'elapsed_seconds': stat['elapsed_s'],
                        'prev_attempt_count': stat['attempt_no']}
         if stat['correct']:

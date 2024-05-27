@@ -31,3 +31,7 @@ class AnswerTimeoutError(Exception):
 
 class NoGameFoundError(Exception):
     pass
+
+
+class IntegrityError(Exception):
+    pass
