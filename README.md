@@ -22,7 +22,7 @@
             'token': 'f910431e39fb490ea6274b8628af5177'
         }
     }
-Save the token on-device and include it in all other API calls.
+Save the token on-device and include it in all other API calls.\
 Possible error types:
 - InternalError - most likely a bug in the backend
 

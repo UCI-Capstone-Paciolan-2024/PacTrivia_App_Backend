@@ -19,10 +19,10 @@ class GameData:
             raise QueryError()
 
     def now_playing(self, venue_id: str):
-        datetime.utcnow().isoformat()
         try:
             db_response = self.table.query(KeyConditionExpression="venue_id = :venue_id and #end > :now",
-                                           ExpressionAttributeNames={'#end': 'end'},
+                                           FilterExpression="#start < :now",
+                                           ExpressionAttributeNames={'#end': 'end', '#start': 'start',},
                                            Limit=1,
                                            ExpressionAttributeValues={':venue_id': venue_id, ':now': datetime.utcnow().isoformat()})
         except ClientError as e:

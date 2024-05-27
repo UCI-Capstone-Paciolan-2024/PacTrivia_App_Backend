@@ -1,5 +1,5 @@
-"""Exception types that may be returned to frontend"""
 class ReturnableException(Exception):
+    """Exceptions that may be returned to frontend"""
     pass
 
 

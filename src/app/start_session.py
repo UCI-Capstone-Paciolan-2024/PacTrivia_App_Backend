@@ -22,12 +22,12 @@ def lambda_handler(event, context):
     try:
         if user := ud.get(token):
             # find the closest venue with a game right now
-            game = None
-            for venue in sorted(VenueData(logger=logger).find_nearby(location), key=lambda x: x['distance']):
-                game = GameData(logger=logger).now_playing(venue_id=venue['id'])
-                if game:
-                    logger.info(f"Found nearest game: {game}")
-                    break
+            if not (game := body.get('override_game', None)):
+                for venue in sorted(VenueData(logger=logger).find_nearby(location), key=lambda x: x['distance']):
+                    game = GameData(logger=logger).now_playing(venue_id=venue['id'])
+                    if game:
+                        logger.info(f"Found nearest game: {game}")
+                        break
             # generate a set of questions and save; return game info
             if game:
                 if body.get('retry', False):
@@ -37,7 +37,8 @@ def lambda_handler(event, context):
                 else:
                     teams = [{'name': team, 'meta': QuestionData().get_team_meta(team), 'exclude_sks': set(int(sk) for sk in user['questions_seen'].get(team, []))} for team in game['teams']]
                     logger.info(f"Team data for question selection: {teams}")
-                    game['team_logos'] = [team['meta'].get('logo', None) for team in teams]
+                    if not game.get('team_logos', None):
+                        game['team_logos'] = [team['meta'].get('logo', None) for team in teams]
                     questions = QuestionData().get_random_set(teams, int(game['questions_per_session']))
                     logger.info(f"Questions assigned for session: {questions}")
                     if user.get('session_data', None) and not body.get('retry', False):

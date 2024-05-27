@@ -1,8 +1,6 @@
 import datetime
 import json
-import random
 from common.response import response
-from common.question_data import QuestionData
 from common.user_data import UserData
 from common.exceptions import NoValidSessionError, NoMoreQuestionsError
 from common.logger import getLogger
