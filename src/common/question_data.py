@@ -89,6 +89,25 @@ class QuestionData:
             self.logger.error(f"Error getting team metadata from db: {e}")
             raise QueryError()
 
+    def update_logo(self, team: str, logo_url: str) -> dict:
+        """Updates the logo for a team (team must already exist)."""
+        try:
+            old = self.table.update_item(
+                Key={"team": team, "sk": "meta"},
+                UpdateExpression="set #logo=:logo",
+                ExpressionAttributeNames={
+                    '#logo': 'logo',
+                },
+                ExpressionAttributeValues={
+                    ':logo': logo_url,
+                },
+                ReturnValues="UPDATED_OLD"
+            )
+            self.logger.info(f"Updated logo for {team} from {old.get('Attributes', {}).get('logo', None)} to {logo_url}")
+        except ClientError as e:
+            self.logger.error(f"Error updating team logo: {e}")
+            raise QueryError("Failed to update logo")
+
     def add(self, team: str, qas: list):
         """Adds a list of q/a dicts to the database for ONE team."""
         try:
