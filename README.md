@@ -1,8 +1,8 @@
 # API
-## Create a user account
+## Create an anonymous user account
 `POST /regDevice`
 #### Request
-    curl --location '$HOST/regDevice' \
+    curl --location "$BASE_URL/regDevice" \
          --header 'Content-Type: application/json' \
          --data '{"deviceID": "d4fd118653914b369a915743093644a5"}'
 #### Response
@@ -11,7 +11,7 @@
     Date: Tue, 30 Apr 2024 02:33:58 GMT
     Content-Type: application/json
     Access-Control-Allow-Origin: *
-    Access-Control-Allow-Headers: content-type
+    Access-Control-Allow-Headers: *
     Access-Control-Allow-Methods: GET,OPTIONS,POST
     Content-Length: 70
     Connection: close
@@ -23,17 +23,23 @@
         }
     }
 Save the token on-device and include it in all other API calls.
+Possible error types:
+- InternalError - most likely a bug in the backend
 
 ## Start a game session
 `POST /startSession`
 #### Request
-    curl --location '$HOST/startSession' \
+    curl --location "$BASE_URL/startSession" \
     --header 'Content-Type: application/json' \
     --data '{
         "token": "d4fd118653914b369a915743093644a5",
-        "userLocation":
-            ["33.65049375601106, -117.8470197846565"]
+        "userLocation": ["33.65049375601106, -117.8470197846565"],
+        "retry": false
     }'
+
+Setting retry to true will repeat the questions from the most recent session and impose a penalty on the subsequent session score.
+Otherwise, all questions will be new.
+
 #### Response
  
     HTTP/1.1 200 OK
@@ -41,29 +47,44 @@ Save the token on-device and include it in all other API calls.
     Date: Tue, 30 Apr 2024 02:46:32 GMT
     Content-Type: application/json
     Access-Control-Allow-Origin: *
-    Access-Control-Allow-Headers: content-type
+    Access-Control-Allow-Headers: *
     Access-Control-Allow-Methods: GET,OPTIONS,POST
     Content-Length: 190
     Connection: close
      
     {
-        'error': None,
-        'data': {
-            'game': {
-                'id': 0,
-                'teams': ['Anteaters', 'Bruins'],
-                'start': '2024-04-01T00:00:00', 
-                'end': '2024-06-01T00:00:00',
-                'max_sessions': 100,
-                'questions_per_session': 10
+        "error": null,
+        "data": {
+            "game": {
+                "start": "2024-05-22T22:58:32Z",
+                "questions_per_session": 10,
+                "end": "2024-06-22T22:58:32Z",
+                "max_sessions:": -1,
+                "teams": [
+                    "UC Irvine Anteaters",
+                    "UCLA Bruins"
+                ],
+                "venue_id": "0",
+                "team_logos": [
+                    "https://upload.wikimedia.org/wikipedia/commons/8/88/UCI_Anteaters_logo.png",
+                    "https://upload.wikimedia.org/wikipedia/commons/5/51/Ucla_bruins_bluelogo.png"
+                ]
             }
         }
     }
 
+Note: team_logos may contain null values\
+Possible error types:
+- AuthError - invalid user token
+- NoMoreQuestionsError - insufficient number of unique questions in the database for new session (when retry=false)
+- NoValidSessionError - could not find a previous session for the nearest active game (when retry=true)
+- NoGameFoundError - could not find an active sports game at any of the nearby venues
+- InternalError - most likely a bug in the backend
+
 ## Start the next question
 `POST /getQuestion`
 #### Request
-    curl --location '$HOST/getQuestion' \
+    curl --location "$BASE_URL/getQuestion" \
     --header 'Content-Type: application/json' \
     --data '{
         "token": "d4fd118653914b369a915743093644a5",
@@ -74,7 +95,7 @@ Save the token on-device and include it in all other API calls.
     Date: Tue, 30 Apr 2024 02:23:47 GMT
     Content-Type: application/json
     Access-Control-Allow-Origin: *
-    Access-Control-Allow-Headers: content-type
+    Access-Control-Allow-Headers: *
     Access-Control-Allow-Methods: GET,OPTIONS,POST
     Content-Length: 194
     Connection: close
@@ -91,10 +112,15 @@ Save the token on-device and include it in all other API calls.
         }
     }
 
+Possible error types:
+- AuthError - invalid user token
+- NoValidSessionError - user has no active session; either startSession was never invoked, or the underlying game has ended (see game end time in startSession response)
+- NoMoreQuestionsError - all questions assigned to the session were already retrieved (refer to 'questions_per_session' in startSession response). Time to start a new session or quit.
+
 ## Check and score answer
 `POST /checkAnswer`
 #### Request
-    curl --location '$HOST/checkAnswer' \
+    curl --location "$BASE_URL/checkAnswer" \
     --header 'Content-Type: application/json' \
     --data '{
         "token": "d4fd118653914b369a915743093644a5",
@@ -106,31 +132,42 @@ Save the token on-device and include it in all other API calls.
     Date: Tue, 30 Apr 2024 02:25:51 GMT
     Content-Type: application/json
     Access-Control-Allow-Origin: *
-    Access-Control-Allow-Headers: content-type
+    Access-Control-Allow-Headers: *
     Access-Control-Allow-Methods: GET,OPTIONS,POST
     Content-Length: 
     Connection: close
      
     {
-        'error': None,
-        'data': {
-            'correct': true
-            'session_score': 200,
-            'question_score': 100,
-            'total_score': 0
+        "error": null,
+        "data": {
+            "subtotal": 170,
+            "answer_correct": true,
+            "session_finished": false,
+            "elapsed_seconds": 9,
+            "prev_attempt_count": 0,
+            "question_score": 85
         }
     }
 
-## Save new sets of questions into the database
-`POST /addQuestions`
+Note: total_score is not updated until a new session is started.
+Possible error types:
+- AnswerTimeoutError - Question timer has expired, an answer was already submitted, or getQuestion was never invoked (frontend should prevent these)
+- NoValidSessionError - user has no active session; either startSession was never invoked, or the underlying game has ended (see game end time in startSession response)
+- InternalError - most likely a bug in the backend
+
+## Manage questions in database
+`POST /questionManager`
+
+Available actions: "add", "list"
 #### Request
-    curl --location '$HOST/addQuestions' \
+    curl --location "$BASE_URL/addQuestions" \
     --header 'Content-Type: application/json' \
     --data '{
+      "action": "add",
       "secret": "d000d2bad8badbadbadbbadadbadf00d",
       "data": [
         {
-          "team": "Anteaters",
+          "team": "UC Irvine Anteaters",
           "questions": [
             {
               "question": "In which year was the UCI Anteaters men'\''s basketball team established?",
@@ -145,7 +182,7 @@ Save the token on-device and include it in all other API calls.
           ]
         },
         {
-          "team": "Bruins",
+          "team": "UCLA Bruins",
           "questions": [
             {
               "question": "How many NCAA men'\''s basketball championships have the UCLA Bruins won?",
@@ -160,16 +197,42 @@ Save the token on-device and include it in all other API calls.
           ]
         }
       ]
-    }
+    }'
 #### Response
-    HTTP/1.1 200 OK
-    Server: Werkzeug/3.0.1 Python/3.12.2
-    Date: Tue, 30 Apr 2024 03:11:20 GMT
-    Content-Type: application/json
-    Access-Control-Allow-Origin: *
-    Access-Control-Allow-Headers: content-type
-    Access-Control-Allow-Methods: GET,OPTIONS,POST
-    Content-Length: 29
-    Connection: close
-     
     {'error': None, 'data': None}
+
+
+## Manage game events in database
+`POST /gameManager`
+
+Available actions: "add", "list"
+#### Request
+    curl --location "$BASE_URL/addQuestions" \
+    --header 'Content-Type: application/json' \
+    --data '{
+        "action": "add",
+        "data": [
+            {
+                "venue_id": "0",
+                "games": [
+                    {
+                        "start": "2024-05-22T22:58:32Z",
+                        "end": "2024-06-22T22:58:32Z",
+                        "teams": ["Anteaters", "Bruins"],
+                        "max_sessions:": -1,
+                        "questions_per_session" : 10
+                    }
+                ]
+            }
+        ]
+    }'
+#### Response
+    {'error': None, 'data': None}
+
+
+# TODO
+- nearest venue search using geohash
+- venueManager route
+- access control for *manager routes
+- - 'remove' action for *manager routes
+- route to return total user score and global stats
