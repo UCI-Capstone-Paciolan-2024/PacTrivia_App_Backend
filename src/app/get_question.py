@@ -4,7 +4,7 @@ import random
 from common.response import response
 from common.question_data import QuestionData
 from common.user_data import UserData
-from common.exceptions import NoValidSessionError
+from common.exceptions import NoValidSessionError, NoMoreQuestionsError
 from common.logger import getLogger
 
 
@@ -22,17 +22,18 @@ def lambda_handler(event, context):
         user = userdata.get(token)
         logger.info(f"found user: {user}")
         if session_data:= user.get('session_data', None):
-            if (datetime.datetime.utcnow().isoformat() < session_data['game']['end']
-                    and session_data['game']['questions_per_session'] > session_data['question_counter']):
-                q = session_data['questions'][int(session_data['question_counter'])]
-                q['timeout_seconds'] = 30  # TODO: hardcoded value
-                userdata.update_last_question_sent(token, q)
-                return response(None, {
-                    "question": q['question'],
-                    "options": q['answer_options'],
-                    "timeout_seconds": q['timeout_seconds'],
-                })
-            raise NoValidSessionError("Session finished")
+            if datetime.datetime.utcnow().isoformat() < session_data['game']['end']:
+                if session_data['game']['questions_per_session'] > session_data['question_counter']:
+                    q = session_data['questions'][int(session_data['question_counter'])]
+                    q['timeout_seconds'] = 30  # TODO: hardcoded value
+                    userdata.update_last_question_sent(token, q)
+                    return response(None, {
+                        "question": q['question'],
+                        "options": q['answer_options'],
+                        "timeout_seconds": q['timeout_seconds'],
+                    })
+                raise NoMoreQuestionsError("All questions in current session already retrieved")
+            raise NoValidSessionError("Game has ended")
         raise NoValidSessionError("No active session found")
     except Exception as e:
         return response(e)

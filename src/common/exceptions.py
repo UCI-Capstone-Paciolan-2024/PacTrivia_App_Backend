@@ -1,35 +1,37 @@
 """Exception types that may be returned to frontend"""
+class ReturnableException(Exception):
+    pass
 
 
-class AuthError(Exception):
+class AuthError(ReturnableException):
+    pass
+
+
+class NoMoreQuestionsError(ReturnableException):
+    pass
+
+
+class QuestionNotFoundError(ReturnableException):
+    pass
+
+
+class NoValidSessionError(ReturnableException):
+    pass
+
+
+class AnswerTimeoutError(ReturnableException):
+    pass
+
+
+class NoGameFoundError(ReturnableException):
+    pass
+
+
+class InternalError(ReturnableException):
     pass
 
 
 class QueryError(Exception):
-    pass
-
-
-class NoMoreQuestionsError(Exception):
-    pass
-
-
-class InvalidSessionError(Exception):
-    pass
-
-
-class QuestionNotFoundError(Exception):
-    pass
-
-
-class NoValidSessionError(Exception):
-    pass
-
-
-class AnswerTimeoutError(Exception):
-    pass
-
-
-class NoGameFoundError(Exception):
     pass
 
 

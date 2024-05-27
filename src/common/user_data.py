@@ -172,22 +172,26 @@ class UserData:
         """Return the stats needed to score a response."""
         try:
             if user := self.get(token):
-                self.logger.info("Found user, checking answer")
-                attempt_data = {}
-                timeout = 30 # TODO: don't hardcode
-                question = user['session_data']['questions'][int(user['session_data']['question_counter']) - 1]
-                if not user['session_data']['awaiting_answer']:
-                    raise AnswerTimeoutError("Duplicate answer")
-                attempt_data['elapsed_s'] = (timestamp - datetime.datetime.fromisoformat(user['session_data']['question_time'])).seconds
-                if attempt_data['elapsed_s'] > timeout:
-                    raise AnswerTimeoutError()
-                attempt_data['correct'] = selected in question['correct_indices']
-                attempt_data['max_s'] = timeout
-                attempt_data['session_score'] = int(user['session_data']['pending_score'])
-                attempt_data['was_last'] = user['session_data']['question_counter'] == user['session_data']['game']['questions_per_session']
-                attempt_data['attempt_no'] = int(user['session_data'].get('attempt_no', 0))
-                self.logger.info(f"Pre-scoring results: {attempt_data}")
-                return attempt_data
+                self.logger.info("Found user")
+                if session_data := user.get('session_data'):
+                    self.logger.info("Found session")
+                    attempt_data = {}
+                    timeout = 30 # TODO: don't hardcode
+                    question = user['session_data']['questions'][int(session_data['question_counter']) - 1]
+                    self.logger.info("Found question")
+                    if not user['session_data']['awaiting_answer']:
+                        raise AnswerTimeoutError("Duplicate answer")
+                    attempt_data['elapsed_s'] = (timestamp - datetime.datetime.fromisoformat(user['session_data']['question_time'])).seconds
+                    if attempt_data['elapsed_s'] > timeout:
+                        raise AnswerTimeoutError()
+                    attempt_data['correct'] = selected in question['correct_indices']
+                    attempt_data['max_s'] = timeout
+                    attempt_data['session_score'] = int(user['session_data']['pending_score'])
+                    attempt_data['was_last'] = user['session_data']['question_counter'] == user['session_data']['game']['questions_per_session']
+                    attempt_data['attempt_no'] = int(user['session_data'].get('attempt_no', 0))
+                    self.logger.info(f"Pre-scoring results: {attempt_data}")
+                    return attempt_data
+                raise NoValidSessionError()
             raise AuthError()
         except ClientError as e:
             self.logger.error(f"Error checking answer: {e}")
