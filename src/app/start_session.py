@@ -30,8 +30,6 @@ def lambda_handler(event, context):
                     break
             # generate a set of questions and save; return game info
             if game:
-                if user.get('session_data', None) and not body.get('retry', False):
-                    ud.complete_session(token)
                 if body.get('retry', False):
                     if not user.get('session_data', None):
                         raise NoValidSessionError("Could not find session to reattempt questions from.")
@@ -42,6 +40,8 @@ def lambda_handler(event, context):
                     game['team_logos'] = [team['meta'].get('logo', None) for team in teams]
                     questions = QuestionData().get_random_set(teams, int(game['questions_per_session']))
                     logger.info(f"Questions assigned for session: {questions}")
+                    if user.get('session_data', None) and not body.get('retry', False):
+                        ud.complete_session(token)
                     ud.start_session(token, game, questions)
                     logger.info(f"Started user session")
                 return response(None,{'game': game})
